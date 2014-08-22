@@ -94,20 +94,20 @@
     };
 
     var Animal = function (canvas, allWeapons, barrier) {
-        this.animalWidth = 20;
-        this.animalHeight = 20;
-        this.weapons = allWeapons;
         this.canvas = canvas.canvas;
         this.context = canvas.context;
+        this.width = 20;
+        this.height = 20;
+        this.x = 10; // start position x
+        this.y = this.canvas.height - this.height; // start position y
         this.fpsTiming = (new Date()).getTime();
         this.speed = 100; // speed (px / s)
         this.jumpSpeed = 500;
-        this.x = 10; // start position x
-        this.y = this.canvas.height - this.animalHeight; // start position y
+        this.weapons = allWeapons;
+        this.barrier = barrier;
         this.jumping = false; // false - not in jump | true - in jump
         this.jumpInic = false;
         this.jumpStartTime = 0; // jump timing - for gravity to calculate actual speed of the jump
-        this.barrier = barrier;
         this.falling = false;
         this.fallStartTime = 0;
         this.fallInic = false;
@@ -139,11 +139,11 @@
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
 
-            if (!this.barrier.collision(this.x, this.y - pixels, this.animalWidth, this.animalHeight)) {
+            if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
                 this.y -= pixels;
             } else {
                 this.jumping = false;
-                this.y -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'down');
+                this.y -= this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'down');
             }
         }
         this.jumpInic = false;
@@ -156,7 +156,7 @@
         }
 
         if (this.falling == false && this.fallInic == false) { // test ground
-            var test = this.barrier.collision(this.x, this.y + 1, this.animalWidth, this.animalHeight);
+            var test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
             if (!test) {
                 this.fallInic = true;
             }
@@ -173,11 +173,11 @@
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
 
-            if (!this.barrier.collision(this.x, this.y - pixels, this.animalWidth, this.animalHeight)) {
+            if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
                 this.y -= pixels;
             } else {
                 this.falling = false;
-                this.y -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'down');
+                this.y -= this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'down');
             }
             this.fallInic = false;
         }
@@ -192,17 +192,17 @@
         var pixels = this.calculateSpeed(); // move left right
 
         if (left) {
-            if (!this.barrier.collision(this.x - pixels, this.y, this.animalWidth, this.animalHeight)) {
+            if (!this.barrier.collision(this.x - pixels, this.y, this.width, this.height)) {
                 this.x -= pixels;
             } else {
-                this.x -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'left');
+                this.x -= this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'left');
             }
         }
         if (right) {
-            if (!this.barrier.collision(this.x + pixels, this.y, this.animalWidth, this.animalHeight)) {
+            if (!this.barrier.collision(this.x + pixels, this.y, this.width, this.height)) {
                 this.x += pixels;
             } else {
-                this.x += this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'right');
+                this.x += this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'right');
             }
         }
         if (up) {
@@ -213,11 +213,11 @@
         this.fall();
 
         if (keyMap[17] == true) { // create new weapon
-            this.weapons.create(this.x, this.y, this.animalWidth, this.animalHeight, keyMapMemLR);
+            this.weapons.create(this.x, this.y, this.width, this.height, keyMapMemLR);
         }
 
         this.context.beginPath();
-        this.context.rect(this.x, this.y, this.animalWidth, this.animalHeight);
+        this.context.rect(this.x, this.y, this.width, this.height);
         this.context.fillStyle = 'yellow';
         this.context.fill();
         this.context.lineWidth = 2;
@@ -244,7 +244,7 @@
             ret = true;            
 
         this.allObjects.forEach( function (e) {
-            if (a_x < e.x + e.w && a_x + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
+            if (a_x < e.x + e.width && a_x + a_w > e.x && a_y < e.y + e.height && a_y + a_h > e.y) {
                 ret = true;
             }
         });
@@ -259,7 +259,7 @@
             newPx = 0 - (this.canvas.height - a_y - a_h); // canvas bottom barrier
             a_yt = a_y - pixels;
             this.allObjects.forEach( function (e) {
-                if (a_x < e.x + e.w && a_x + a_w > e.x && a_yt < e.y + e.h && a_yt + a_h > e.y) {
+                if (a_x < e.x + e.width && a_x + a_w > e.x && a_yt < e.y + e.height && a_yt + a_h > e.y) {
                     newPx = 0 - (e.y - a_y - a_h);
                 }
             });
@@ -269,7 +269,7 @@
             newPx = this.canvas.width - a_x - a_w; // canvas right barrier
             a_xt = a_x + pixels;
             this.allObjects.forEach( function (e) {
-                if (a_xt < e.x + e.w && a_xt + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
+                if (a_xt < e.x + e.width && a_xt + a_w > e.x && a_y < e.y + e.height && a_y + a_h > e.y) {
                     newPx = e.x - a_x - a_w;
                 }
             });
@@ -279,8 +279,8 @@
             newPx = 0; // canvas left barrier
             a_xt = a_x - pixels;
             this.allObjects.forEach( function (e) {
-                if (a_xt < e.x + e.w && a_xt + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
-                    newPx = a_x - e.x - e.w;
+                if (a_xt < e.x + e.width && a_xt + a_w > e.x && a_y < e.y + e.height && a_y + a_h > e.y) {
+                    newPx = a_x - e.x - e.width;
                 }
             });
         }
@@ -295,7 +295,8 @@
         this.speed = 400; // px / s
         this.x = x;
         this.y = y;
-        this.size = 2;
+        this.width = 2;
+        this.height = 2;
         this.deleteMe = false;
         this.fire_right_left = right_left; 
         this.barrier = barrier;
@@ -309,8 +310,8 @@
 
         this.context.beginPath();
         this.context.moveTo(this.x, this.y);
-        this.context.lineTo(this.x + this.size, this.y);
-        this.context.lineWidth = 2;
+        this.context.lineTo(this.x + this.width, this.y);
+        this.context.lineWidth = this.height;
         this.context.strokeStyle = '#990000';
         this.context.stroke();
 
@@ -320,7 +321,7 @@
     Weapon.prototype.fireLeft = function () {
         var pixels = this.calculateSpeed();
         this.x -= pixels;
-        if (this.barrier.collision(this.x, this.y, this.size, 2)) {
+        if (this.barrier.collision(this.x, this.y, this.width, this.height)) {
             this.deleteMe = true;
         }
     };
@@ -328,7 +329,7 @@
     Weapon.prototype.fireRight = function () {
         var pixels = this.calculateSpeed();
         this.x += pixels;
-        if (this.barrier.collision(this.x, this.y, this.size, 2)) {
+        if (this.barrier.collision(this.x, this.y, this.width, this.height)) {
             this.deleteMe = true;
         }
     }
@@ -371,18 +372,18 @@
         }, this);
     };
 
-    var Box = function (canvas, w, h, x, y) {
+    var Box = function (canvas, width, height, x, y) {
         this.canvas = canvas.canvas;
         this.context = canvas.context;
-        this.w = w;
-        this.h = h;
+        this.width = width;
+        this.height = height;
         this.x = x;
         this.y = y;
     };
 
     Box.prototype.render = function () {
         this.context.beginPath();
-        this.context.rect(this.x, this.y, this.w, this.h);
+        this.context.rect(this.x, this.y, this.width, this.height);
         this.context.fillStyle = 'brown';
         this.context.fill();
     };
@@ -400,7 +401,7 @@
         this.falling = false;
         this.fallStartTime = 0;
         this.fallInic = true;
-        this.direction = true;
+        this.direction = true; // true - left | false - right
     };
 
     Robot.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
@@ -412,11 +413,6 @@
     };
 
     Robot.prototype.fall = function () {
-        
-        if (this.jumping == true) {
-            return;
-        }
-
         if (this.falling == false && this.fallInic == false) { // test ground
             var test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
             if (!test) {
@@ -449,9 +445,6 @@
 
         var pixels = this.calculateSpeed(); // move left right
 
-        if (pixels == 0)
-            this.direction != this.direction;
-
         if (this.direction) {
             if (!this.barrier.collision(this.x - pixels, this.y, this.width, this.height)) {
                 this.x -= pixels;
@@ -480,6 +473,9 @@
         this.context.stroke();
         this.fpsTiming = (new Date()).getTime();
     };
+
+
+    /***** BEGIN INITIALIZATION ********/
 
     var canvas = new Canvas();
     var fpsShow = new FpsShow();
