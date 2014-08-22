@@ -484,6 +484,16 @@
     document.addEventListener("keydown", function (e) { keyboard.kDown(e); });
     document.addEventListener("keyup", function (e) { keyboard.kUp(e); });
 
+    var barrier = new Barrier(canvas);
+    var allWeapons = new AllWeapons(canvas, barrier);
+
+    var animal = new Animal(canvas, allWeapons, barrier);
+
+    var robot = new Robot(canvas, barrier, 950);
+    var robot2 = new Robot(canvas, barrier, 750);
+    var robot3 = new Robot(canvas, barrier, 550);
+    var robot4 = new Robot(canvas, barrier, 350);
+
     var box  = new Box(canvas, 300, 20, 100, 380);
     var box2 = new Box(canvas, 200, 100, 550, 300);
     var box3 = new Box(canvas, 100, 50, 780, 350);
@@ -492,7 +502,6 @@
     var box6 = new Box(canvas, 10, 20, 740, 280);
     var box7 = new Box(canvas, 10, 80, 760, 320);
     
-    var barrier = new Barrier(canvas);
     barrier.add(box);
     barrier.add(box2);
     barrier.add(box3);
@@ -500,14 +509,7 @@
     barrier.add(box5);
     barrier.add(box6);
     barrier.add(box7);
-
-    var allWeapons = new AllWeapons(canvas, barrier);
-    var animal = new Animal(canvas, allWeapons, barrier);
-    var robot = new Robot(canvas, barrier, 950);
-    var robot2 = new Robot(canvas, barrier, 750);
-    var robot3 = new Robot(canvas, barrier, 550);
-    var robot4 = new Robot(canvas, barrier, 350);
-    
+ 
     setInterval( function () {
         fpsShow.render();
         canvas.clean();
