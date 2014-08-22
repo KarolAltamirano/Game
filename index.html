@@ -93,19 +93,24 @@
         }
     };
 
-    var Animal = function (canvas, allWeapons) {
+    var Animal = function (canvas, allWeapons, barrier) {
         this.animalWidth = 20;
         this.animalHeight = 20;
         this.weapons = allWeapons;
         this.canvas = canvas.canvas;
         this.context = canvas.context;
         this.fpsTiming = (new Date()).getTime();
-        this.speed = 130; // speed (px / s)
-        this.jumpSpeed = 700;
+        this.speed = 100; // speed (px / s)
+        this.jumpSpeed = 500;
         this.x = 10; // start position x
         this.y = this.canvas.height - this.animalHeight; // start position y
         this.jumping = false; // false - not in jump | true - in jump
+        this.jumpInic = false;
         this.jumpStartTime = 0; // jump timing - for gravity to calculate actual speed of the jump
+        this.barrier = barrier;
+        this.falling = false;
+        this.fallStartTime = 0;
+        this.fallInic = false;
     };
 
     Animal.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
@@ -129,18 +134,53 @@
         }
 
         if (this.jumping == true) { // calculate jump speed
-            spd = this.jumpSpeed - (((new Date()).getTime() - this.jumpStartTime) * 2.81); // (jumpspeed) - ((now) - (jump start)) * gravity acceleration
+            spd = this.jumpSpeed - (((new Date()).getTime() - this.jumpStartTime) * 1.81); // (jumpspeed) - ((now) - (jump start)) * gravity acceleration
 
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
 
-            this.y -= pixels;
-        }
-
-        if (this.y >= this.canvas.height - this.animalHeight) { // TO DO - set floor for objects
-            this.jumping = false;
+            if (!this.barrier.collision(this.x, this.y - pixels, this.animalWidth, this.animalHeight)) {
+                this.y -= pixels;
+            } else {
+                this.jumping = false;
+                this.y -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'down');
+            }
         }
         this.jumpInic = false;
+    };
+
+    Animal.prototype.fall = function () {
+        
+        if (this.jumping == true) {
+            return;
+        }
+
+        if (this.falling == false && this.fallInic == false) { // test ground
+            var test = this.barrier.collision(this.x, this.y + 1, this.animalWidth, this.animalHeight);
+            if (!test) {
+                this.fallInic = true;
+            }
+        }
+        
+        if (this.falling == false && this.fallInic == true) {
+            this.falling = true;
+            this.fallStartTime = (new Date()).getTime();
+        }
+
+        if (this.falling == true) {
+            spd = 0 - (((new Date()).getTime() - this.fallStartTime) * 1.81);
+
+            time = (new Date()).getTime() - this.fpsTiming;
+            pixels = Math.round(spd * time / 1000);  
+
+            if (!this.barrier.collision(this.x, this.y - pixels, this.animalWidth, this.animalHeight)) {
+                this.y -= pixels;
+            } else {
+                this.falling = false;
+                this.y -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'down');
+            }
+            this.fallInic = false;
+        }
     };
 
     Animal.prototype.render = function (keyMap, keyMapMemLR) {
@@ -151,20 +191,30 @@
 
         var pixels = this.calculateSpeed(); // move left right
 
-        if (left)   this.x -= pixels;
-        if (right)  this.x += pixels;
-        if (up)     this.jumpInic = true;
-    
+        if (left) {
+            if (!this.barrier.collision(this.x - pixels, this.y, this.animalWidth, this.animalHeight)) {
+                this.x -= pixels;
+            } else {
+                this.x -= this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'left');
+            }
+        }
+        if (right) {
+            if (!this.barrier.collision(this.x + pixels, this.y, this.animalWidth, this.animalHeight)) {
+                this.x += pixels;
+            } else {
+                this.x += this.barrier.newPxMove(this.x, this.y, this.animalWidth, this.animalHeight, pixels, 'right');
+            }
+        }
+        if (up) {
+            this.jumpInic = true;
+        }
+            
         this.jump();
-    
+        this.fall();
+
         if (keyMap[17] == true) { // create new weapon
             this.weapons.create(this.x, this.y, this.animalWidth, this.animalHeight, keyMapMemLR);
         }
-
-        if (this.x < 0) this.x = 0;
-        if (this.y < 0) this.y = 0; 
-        if (this.x > this.canvas.width  - this.animalWidth) this.x = this.canvas.width  - this.animalWidth;
-        if (this.y > this.canvas.height - this.animalHeight) this.y = this.canvas.height - this.animalHeight;   
 
         this.context.beginPath();
         this.context.rect(this.x, this.y, this.animalWidth, this.animalHeight);
@@ -177,7 +227,68 @@
         this.fpsTiming = (new Date()).getTime();
     };
 
-    var Weapon = function (canvas, x, y, right_left) {
+    var Barrier = function (canvas) {
+        this.allObjects = new Array();
+        this.canvas = canvas.canvas;
+        this.context = canvas.context;
+    };
+
+    Barrier.prototype.add = function (obj) {
+        this.allObjects[this.allObjects.length] = obj;
+    };
+
+    Barrier.prototype.collision = function (a_x, a_y, a_w, a_h) {
+        var ret = false;
+
+        if (a_x < 0 || a_y < 0 || a_x > this.canvas.width  - a_w || a_y > this.canvas.height - a_h) 
+            ret = true;            
+
+        this.allObjects.forEach( function (e) {
+            if (a_x < e.x + e.w && a_x + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
+                ret = true;
+            }
+        });
+
+        return ret;
+    };
+
+    Barrier.prototype.newPxMove = function (a_x, a_y, a_w, a_h, pixels, direction) {
+        var newPx = 0;
+
+        if (direction == 'down') {
+            newPx = 0 - (this.canvas.height - a_y - a_h); // canvas bottom barrier
+            a_yt = a_y - pixels;
+            this.allObjects.forEach( function (e) {
+                if (a_x < e.x + e.w && a_x + a_w > e.x && a_yt < e.y + e.h && a_yt + a_h > e.y) {
+                    newPx = 0 - (e.y - a_y - a_h);
+                }
+            });
+        }
+
+        if (direction == 'right') {
+            newPx = this.canvas.width - a_x - a_w; // canvas right barrier
+            a_xt = a_x + pixels;
+            this.allObjects.forEach( function (e) {
+                if (a_xt < e.x + e.w && a_xt + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
+                    newPx = e.x - a_x - a_w;
+                }
+            });
+        }
+
+        if (direction == 'left') {
+            newPx = 0; // canvas left barrier
+            a_xt = a_x - pixels;
+            this.allObjects.forEach( function (e) {
+                if (a_xt < e.x + e.w && a_xt + a_w > e.x && a_y < e.y + e.h && a_y + a_h > e.y) {
+                    newPx = a_x - e.x - e.w;
+                }
+            });
+        }
+
+        return newPx;
+    };
+
+    var Weapon = function (canvas, x, y, right_left, barrier) {
         this.canvas = canvas.canvas;
         this.context = canvas.context;
         this.fpsTiming = (new Date()).getTime();
@@ -187,6 +298,7 @@
         this.size = 2;
         this.deleteMe = false;
         this.fire_right_left = right_left; 
+        this.barrier = barrier;
     };
 
     Weapon.prototype.render = function () {
@@ -208,7 +320,7 @@
     Weapon.prototype.fireLeft = function () {
         var pixels = this.calculateSpeed();
         this.x -= pixels;
-        if (this.x <= 0) {
+        if (this.barrier.collision(this.x, this.y, this.size, 2)) {
             this.deleteMe = true;
         }
     };
@@ -216,7 +328,7 @@
     Weapon.prototype.fireRight = function () {
         var pixels = this.calculateSpeed();
         this.x += pixels;
-        if (this.x > this.canvas.width) {
+        if (this.barrier.collision(this.x, this.y, this.size, 2)) {
             this.deleteMe = true;
         }
     }
@@ -228,9 +340,10 @@
         return pixels;
     };
 
-    var AllWeapons = function (canvas) {
+    var AllWeapons = function (canvas, barrier) {
         this.canvas = canvas;
         this.weapons = new Array();
+        this.barrier = barrier;
     };
 
     AllWeapons.prototype.create = function (x, y, width, height, keyMapMemLR) {
@@ -245,7 +358,7 @@
             right_left = 2;
         }
 
-        var w = new Weapon(this.canvas, w_x, w_y, right_left);
+        var w = new Weapon(this.canvas, w_x, w_y, right_left, this.barrier);
         this.weapons[this.weapons.length] = w;
     };
 
@@ -258,6 +371,116 @@
         }, this);
     };
 
+    var Box = function (canvas, w, h, x, y) {
+        this.canvas = canvas.canvas;
+        this.context = canvas.context;
+        this.w = w;
+        this.h = h;
+        this.x = x;
+        this.y = y;
+    };
+
+    Box.prototype.render = function () {
+        this.context.beginPath();
+        this.context.rect(this.x, this.y, this.w, this.h);
+        this.context.fillStyle = 'brown';
+        this.context.fill();
+    };
+
+    var Robot = function (canvas, barrier, x) {
+        this.width = 20;
+        this.height = 20;
+        this.canvas = canvas.canvas;
+        this.context = canvas.context;
+        this.fpsTiming = (new Date()).getTime();
+        this.speed = 50; // speed (px / s)
+        this.x = x; // start position x
+        this.y = 0; // this.canvas.height - this.height; // start position y
+        this.barrier = barrier;
+        this.falling = false;
+        this.fallStartTime = 0;
+        this.fallInic = true;
+        this.direction = true;
+    };
+
+    Robot.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
+        var time = 0, pixels = 0;
+
+        time = (new Date()).getTime() - this.fpsTiming; // timing begin
+        pixels = Math.round(this.speed * time / 1000);
+        return pixels;
+    };
+
+    Robot.prototype.fall = function () {
+        
+        if (this.jumping == true) {
+            return;
+        }
+
+        if (this.falling == false && this.fallInic == false) { // test ground
+            var test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
+            if (!test) {
+                this.fallInic = true;
+            }
+        }
+        
+        if (this.falling == false && this.fallInic == true) {
+            this.falling = true;
+            this.fallStartTime = (new Date()).getTime();
+        }
+
+        if (this.falling == true) {
+            spd = 0 - (((new Date()).getTime() - this.fallStartTime) * 1.81);
+
+            time = (new Date()).getTime() - this.fpsTiming;
+            pixels = Math.round(spd * time / 1000);  
+
+            if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
+                this.y -= pixels;
+            } else {
+                this.falling = false;
+                this.y -= this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'down');
+            }
+            this.fallInic = false;
+        }
+    };
+
+    Robot.prototype.render = function () {
+
+        var pixels = this.calculateSpeed(); // move left right
+
+        if (pixels == 0)
+            this.direction != this.direction;
+
+        if (this.direction) {
+            if (!this.barrier.collision(this.x - pixels, this.y, this.width, this.height)) {
+                this.x -= pixels;
+            } else {
+                this.x -= this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'left');
+                this.direction = false;
+            }
+        }
+        else {
+            if (!this.barrier.collision(this.x + pixels, this.y, this.width, this.height)) {
+                this.x += pixels;
+            } else {
+                this.x += this.barrier.newPxMove(this.x, this.y, this.width, this.height, pixels, 'right');
+                this.direction = true;
+            }
+        }
+
+        this.fall();
+
+        this.context.beginPath();
+        this.context.rect(this.x, this.y, this.width, this.height);
+        this.context.fillStyle = 'orange';
+        this.context.fill();
+        this.context.lineWidth = 2;
+        this.context.strokeStyle = 'red';
+        this.context.stroke();
+        this.fpsTiming = (new Date()).getTime();
+    };
+
     var canvas = new Canvas();
     var fpsShow = new FpsShow();
     var keyboard = new Keyboard();
@@ -265,15 +488,47 @@
     document.addEventListener("keydown", function (e) { keyboard.kDown(e); });
     document.addEventListener("keyup", function (e) { keyboard.kUp(e); });
 
-    var allWeapons = new AllWeapons(canvas);
-    var animal = new Animal(canvas, allWeapons);
+    var box  = new Box(canvas, 300, 20, 100, 380);
+    var box2 = new Box(canvas, 200, 100, 550, 300);
+    var box3 = new Box(canvas, 100, 50, 780, 350);
+    var box4 = new Box(canvas, 50, 50, 470, 350);
+    var box5 = new Box(canvas, 10, 20, 570, 280);
+    var box6 = new Box(canvas, 10, 20, 740, 280);
+    var box7 = new Box(canvas, 10, 80, 760, 320);
+    
+    var barrier = new Barrier(canvas);
+    barrier.add(box);
+    barrier.add(box2);
+    barrier.add(box3);
+    barrier.add(box4);
+    barrier.add(box5);
+    barrier.add(box6);
+    barrier.add(box7);
 
+    var allWeapons = new AllWeapons(canvas, barrier);
+    var animal = new Animal(canvas, allWeapons, barrier);
+    var robot = new Robot(canvas, barrier, 950);
+    var robot2 = new Robot(canvas, barrier, 750);
+    var robot3 = new Robot(canvas, barrier, 550);
+    var robot4 = new Robot(canvas, barrier, 350);
+    
     setInterval( function () {
         fpsShow.render();
         canvas.clean();
         animal.render(keyboard.keyMap, keyboard.keyMapMemLR);
+        robot.render();
+        robot2.render();
+        robot3.render();
+        robot4.render();
         allWeapons.render();
-    }, 20);
+        box.render();
+        box2.render();
+        box3.render();
+        box4.render();
+        box5.render();
+        box6.render();
+        box7.render();
+    }, 1000 / 60);
 
     </script>
 </body>
