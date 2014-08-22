@@ -18,6 +18,13 @@
             overflow: auto;
             background: #666;
         }
+        #content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 490px;
+
+        }
         #myCanvas {
             position: relative;
             top: 50%;
@@ -42,8 +49,10 @@
     </style>
 </head>
 <body>
-    <canvas id="myCanvas" width="1000" height="400"></canvas>
-    <div id="fps"></div>
+    <div id="content">
+        <canvas id="myCanvas" width="1000" height="400"></canvas>
+        <div id="fps"></div>
+    </div>
     <script>
     var FpsShow = function () {
         this.lastLoop = 0;
@@ -68,7 +77,7 @@
     };
 
     var Keyboard = function () {
-        this.keyMap = { 37: false, 38: false, 39: false, 40: false, 32: false, 17: false };
+        this.keyMap = { 37: false, 38: false, 39: false, 40: false, 32: false, 17: false, 13: false };
         this.keyMapMemLR = { 37: false, 39: false };
     };
 
@@ -111,6 +120,7 @@
         this.falling = false;
         this.fallStartTime = 0;
         this.fallInic = false;
+        this.life = 1;
     };
 
     Animal.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
@@ -118,6 +128,7 @@
 
         time = (new Date()).getTime() - this.fpsTiming; // timing begin
         pixels = Math.round(this.speed * time / 1000);
+
         return pixels;
     };
 
@@ -215,6 +226,12 @@
         if (keyMap[17] == true) { // create new weapon
             this.weapons.create(this.x, this.y, this.width, this.height, keyMapMemLR);
         }
+
+        // begin collision with robot
+        if (this.barrier.collisionRobot(this.x, this.y, this.width, this.height)) {
+            this.life -= 1;
+        }
+        // end collision with robot
 
         this.context.beginPath();
         this.context.rect(this.x, this.y, this.width, this.height);
@@ -387,7 +404,8 @@
     AllWeapons.prototype.render = function () {
         this.weapons.forEach( function (e, index) {
             if (e.deleteMe == true) {
-                delete this.weapons[index];
+                // delete this.weapons[index];
+                this.weapons.splice(index, 1);
             } else {
                 e.render();
             }
@@ -406,7 +424,7 @@
     Box.prototype.render = function () {
         this.context.beginPath();
         this.context.rect(this.x, this.y, this.width, this.height);
-        this.context.fillStyle = 'brown';
+        this.context.fillStyle = '#004400';
         this.context.fill();
     };
 
@@ -511,68 +529,148 @@
     AllRobots.prototype.render = function () {
         this.robots.forEach( function (e, index) {
             if (e.deleteMe == true) {
-                delete this.robots[index];
+                // delete this.robots[index];
+                this.robots.splice(index, 1);
             } else {
                 e.render();
             }
         }, this);
     };
 
+    var Game = function () {
+        this.canvas = new Canvas();
+        this.fpsShow = new FpsShow();
+        this.keyboard = new Keyboard();
+        
+        document.addEventListener("keydown", (function (_this) { return function (e) { _this.keyboard.kDown(e); }; })(this));
+        document.addEventListener("keyup",   (function (_this) { return function (e) { _this.keyboard.kUp(e);   }; })(this));
+
+
+        this.msgPrint = false;
+        this.gameInic = true;
+        this.inGame = false;
+        this.gameOver = false;
+        this.winGame = false;
+
+    };
+
+    Game.prototype.create = function () {
+        this.barrier = new Barrier(this.canvas);
+        this.allWeapons = new AllWeapons(this.canvas, this.barrier);
+
+        this.animal = new Animal(this.canvas, this.allWeapons, this.barrier);
+
+        this.allRobots = new AllRobots(this.canvas, this.barrier);
+
+        this.box  = new Box(this.canvas, 200, 15, 140, 385);
+        this.box2 = new Box(this.canvas, 200, 100, 550, 300);
+        this.box3 = new Box(this.canvas, 100, 50, 780, 350);
+        this.box4 = new Box(this.canvas, 50, 50, 470, 350);
+        this.box5 = new Box(this.canvas, 20, 20, 570, 280);
+        this.box6 = new Box(this.canvas, 20, 20, 730, 280);
+        this.box7 = new Box(this.canvas, 10, 70, 770, 330);
+        
+        this.barrier.add(this.box);
+        this.barrier.add(this.box2);
+        this.barrier.add(this.box3);
+        this.barrier.add(this.box4);
+        this.barrier.add(this.box5);
+        this.barrier.add(this.box6);
+        this.barrier.add(this.box7);
+
+        this.allRobots.create(950);
+        this.allRobots.create(750);
+        this.allRobots.create(550);
+        this.allRobots.create(350);
+
+        this.barrier.addRobots(this.allRobots);
+    };
+
+    Game.prototype.manage = function () {
+        this.fpsShow.render();
+        if (this.gameInic == true && this.inGame == false) { // start new game on gameInic
+            this.create();
+            this.gameInic = false;
+            this.inGame = true;
+        }
+
+        if (this.gameOver == true && this.msgPrint == true) { // start new game after game over
+            if (this.keyboard.keyMap[13] == true) {
+                this.gameOver = false;
+                this.msgPrint = false;
+                this.gameInic = true;
+            }
+        }
+
+        if (this.winGame == true) {
+            if (this.keyboard.keyMap[13] == true) {
+                this.winGame = false;
+                this.gameInic = true;
+                this.inGame = false;
+            }
+        }
+
+        if (this.inGame == true) {
+
+            if (this.animal.life <= 0) {
+                this.inGame = false;
+                this.gameOver = true;
+            }
+
+            if (this.allRobots.robots.length == 0) {
+                this.winGame = true;
+            }
+
+            this.canvas.clean();
+            this.allWeapons.render();
+            this.animal.render(this.keyboard.keyMap, this.keyboard.keyMapMemLR);
+            
+            this.allRobots.render();
+            
+            this.box.render();
+            this.box2.render();
+            this.box3.render();
+            this.box4.render();
+            this.box5.render();
+            this.box6.render();
+            this.box7.render();
+        }
+
+        if (this.gameOver == true && this.msgPrint == false) {
+            this.msgPrint = true;
+
+            this.canvas.context.font = '40pt Calibri';
+            this.canvas.context.textAlign = 'center';
+            this.canvas.context.fillStyle = 'red';
+            this.canvas.context.fillText('Game Over!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
+
+            this.canvas.context.font = '20pt Calibri';
+            this.canvas.context.textAlign = 'center';
+            this.canvas.context.fillStyle = 'blue';
+            this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+        }
+
+        if (this.winGame == true) {
+
+            this.canvas.context.font = '40pt Calibri';
+            this.canvas.context.textAlign = 'center';
+            this.canvas.context.fillStyle = 'red';
+            this.canvas.context.fillText('You Won the game!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
+
+            this.canvas.context.font = '20pt Calibri';
+            this.canvas.context.textAlign = 'center';
+            this.canvas.context.fillStyle = 'blue';
+            this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+        }
+    };
+
 
     /***** BEGIN INITIALIZATION ********/
 
-    var canvas = new Canvas();
-    var fpsShow = new FpsShow();
-    var keyboard = new Keyboard();
-
-    document.addEventListener("keydown", function (e) { keyboard.kDown(e); });
-    document.addEventListener("keyup", function (e) { keyboard.kUp(e); });
-
-    var barrier = new Barrier(canvas);
-    var allWeapons = new AllWeapons(canvas, barrier);
-
-    var animal = new Animal(canvas, allWeapons, barrier);
-
-    var allRobots = new AllRobots(canvas, barrier);
-
-    var box  = new Box(canvas, 300, 20, 100, 380);
-    var box2 = new Box(canvas, 200, 100, 550, 300);
-    var box3 = new Box(canvas, 100, 50, 780, 350);
-    var box4 = new Box(canvas, 50, 50, 470, 350);
-    var box5 = new Box(canvas, 20, 20, 570, 280);
-    var box6 = new Box(canvas, 20, 20, 730, 280);
-    var box7 = new Box(canvas, 10, 80, 760, 320);
-    
-    barrier.add(box);
-    barrier.add(box2);
-    barrier.add(box3);
-    barrier.add(box4);
-    barrier.add(box5);
-    barrier.add(box6);
-    barrier.add(box7);
-
-    allRobots.create(950);
-    allRobots.create(750);
-    allRobots.create(550);
-    allRobots.create(350);
-
-    barrier.addRobots(allRobots);
+    game = new Game();
 
     setInterval( function () {
-        fpsShow.render();
-        canvas.clean();
-        allWeapons.render();
-        animal.render(keyboard.keyMap, keyboard.keyMapMemLR);
-        
-        allRobots.render();
-        
-        box.render();
-        box2.render();
-        box3.render();
-        box4.render();
-        box5.render();
-        box6.render();
-        box7.render();
+        game.manage();   
     }, 1000 / 60);
 
     </script>
