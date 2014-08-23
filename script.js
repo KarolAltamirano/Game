@@ -205,6 +205,10 @@
         this.robots[this.robots.length] = obj;
     };
 
+    Barrier.prototype.removeRobot = function (index) {
+        this.robots.splice(index, 1);
+    }
+
     Barrier.prototype.collision = function (a_x, a_y, a_w, a_h) {
         var ret = false;
 
@@ -500,6 +504,7 @@
     ManageRobots.prototype.render = function () {
         this.robots.forEach( function (e, index) {
             if (e.deleteMe == true) {
+                this.barrier.removeRobot(index, 1);
                 this.robots.splice(index, 1);
             } else {
                 e.render();
