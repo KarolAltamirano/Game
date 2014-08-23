@@ -47,7 +47,7 @@
         }
     };
 
-    var Animal = function (canvas, allWeapons, barrier) {
+    var Animal = function (canvas, weapons, barrier) {
         this.canvas = canvas.canvas;
         this.context = canvas.context;
         this.width = 20;
@@ -57,7 +57,7 @@
         this.fpsTiming = (new Date()).getTime();
         this.speed = 100; // speed (px / s)
         this.jumpSpeed = 500;
-        this.weapons = allWeapons;
+        this.weapons = weapons;
         this.barrier = barrier;
         this.jumping = false; // false - not in jump | true - in jump
         this.jumpInic = false;
@@ -325,13 +325,13 @@
         return pixels;
     };
 
-    var AllWeapons = function (canvas, barrier) {
+    var ManageWeapons = function (canvas, barrier) {
         this.canvas = canvas;
         this.weapons = new Array();
         this.barrier = barrier;
     };
 
-    AllWeapons.prototype.create = function (x, y, width, height, keyMapMemLR) {
+    ManageWeapons.prototype.create = function (x, y, width, height, keyMapMemLR) {
         var w_x, w_y, right_left;
         if (keyMapMemLR[37] == true) { // fire to left
             w_x = x - 2;
@@ -347,7 +347,7 @@
         this.weapons[this.weapons.length] = w;
     };
 
-    AllWeapons.prototype.render = function () {
+    ManageWeapons.prototype.render = function () {
         this.weapons.forEach( function (e, index) {
             if (e.deleteMe == true) {
                 this.weapons.splice(index, 1);
@@ -467,18 +467,18 @@
 
     };
 
-    var AllRobots = function (canvas, barrier) {
+    var ManageRobots = function (canvas, barrier) {
         this.canvas = canvas;
         this.robots = new Array();
         this.barrier = barrier;
     };
 
-    AllRobots.prototype.create = function (x) {
+    ManageRobots.prototype.create = function (x) {
         var robot = new Robot(this.canvas, this.barrier, x);
         this.robots[this.robots.length] = robot;
     };
 
-    AllRobots.prototype.render = function () {
+    ManageRobots.prototype.render = function () {
         this.robots.forEach( function (e, index) {
             if (e.deleteMe == true) {
                 this.robots.splice(index, 1);
@@ -507,11 +507,11 @@
 
     Game.prototype.create = function () {
         this.barrier = new Barrier(this.canvas);
-        this.allWeapons = new AllWeapons(this.canvas, this.barrier);
+        this.weapons = new ManageWeapons(this.canvas, this.barrier);
 
-        this.animal = new Animal(this.canvas, this.allWeapons, this.barrier);
+        this.animal = new Animal(this.canvas, this.weapons, this.barrier);
 
-        this.allRobots = new AllRobots(this.canvas, this.barrier);
+        this.robots = new ManageRobots(this.canvas, this.barrier);
 
         this.box  = new Box(this.canvas, 200, 15, 140, 385);
         this.box2 = new Box(this.canvas, 200, 100, 550, 300);
@@ -531,12 +531,12 @@
         this.barrier.add(this.box7);
         this.barrier.add(this.box8);
 
-        this.allRobots.create(920);
-        this.allRobots.create(750);
-        this.allRobots.create(550);
-        this.allRobots.create(350);
+        this.robots.create(920);
+        this.robots.create(750);
+        this.robots.create(550);
+        this.robots.create(350);
 
-        this.barrier.addRobots(this.allRobots);
+        this.barrier.addRobots(this.robots);
     };
 
     Game.prototype.manage = function () {
@@ -570,15 +570,15 @@
                 this.gameOver = true;
             }
 
-            if (this.allRobots.robots.length == 0) {
+            if (this.robots.robots.length == 0) {
                 this.winGame = true;
             }
 
             this.canvas.clean();
-            this.allWeapons.render();
+            this.weapons.render();
             this.animal.render(this.keyboard.keyMap, this.keyboard.keyMapMemLR);
             
-            this.allRobots.render();
+            this.robots.render();
             
             this.box.render();
             this.box2.render();
