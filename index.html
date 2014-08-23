@@ -128,7 +128,7 @@
 
         time = (new Date()).getTime() - this.fpsTiming; // timing begin
         pixels = Math.round(this.speed * time / 1000);
-
+        if (pixels > 5) pixels = 5;
         return pixels;
     };
 
@@ -149,7 +149,8 @@
 
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
-
+            if (pixels >  10) pixels =  10; // max speed of jump up (px / s)
+            if (pixels < -10) pixels = -10; // max speed of jump down (px / s)
             if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
                 this.y -= pixels;
             } else {
@@ -183,7 +184,7 @@
 
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
-
+            if (pixels < -10) pixels = -10; // max speed of falling (px / s)
             if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
                 this.y -= pixels;
             } else {
@@ -451,6 +452,7 @@
 
         time = (new Date()).getTime() - this.fpsTiming; // timing begin
         pixels = Math.round(this.speed * time / 1000);
+        if (pixels > 5) pixels = 5;
         return pixels;
     };
 
@@ -472,7 +474,7 @@
 
             time = (new Date()).getTime() - this.fpsTiming;
             pixels = Math.round(spd * time / 1000);  
-
+            if (pixels < -10) pixels = -10; // max speed of falling (px / s)
             if (!this.barrier.collision(this.x, this.y - pixels, this.width, this.height)) {
                 this.y -= pixels;
             } else {
