@@ -444,6 +444,7 @@
         this.fallInic = true;
         this.direction = true; // true - left | false - right
         this.life = 30;
+        this.maxLife = 30;
         this.deleteMe = false; // if robot has no life delet him | the value changes method Barrier.prototype.collisionRobot
     };
 
@@ -515,6 +516,11 @@
         this.context.strokeStyle = 'red';
         this.context.stroke();
         this.fpsTiming = (new Date()).getTime();
+        this.context.beginPath();
+        this.context.rect(this.x, this.y, this.width, this.height * (1 - this.life / this.maxLife));
+        this.context.fillStyle = 'red';
+        this.context.fill();
+
     };
 
     var AllRobots = function (canvas, barrier) {
@@ -568,9 +574,10 @@
         this.box2 = new Box(this.canvas, 200, 100, 550, 300);
         this.box3 = new Box(this.canvas, 100, 50, 780, 350);
         this.box4 = new Box(this.canvas, 50, 50, 470, 350);
-        this.box5 = new Box(this.canvas, 20, 20, 570, 280);
-        this.box6 = new Box(this.canvas, 20, 20, 730, 280);
-        this.box7 = new Box(this.canvas, 10, 70, 770, 330);
+        this.box5 = new Box(this.canvas, 10, 15, 570, 285);
+        this.box6 = new Box(this.canvas, 10, 15, 730, 285);
+        this.box7 = new Box(this.canvas, 10, 70, 760, 330);
+        this.box8 = new Box(this.canvas, 10, 70, 890, 330);
         
         this.barrier.add(this.box);
         this.barrier.add(this.box2);
@@ -579,8 +586,9 @@
         this.barrier.add(this.box5);
         this.barrier.add(this.box6);
         this.barrier.add(this.box7);
+        this.barrier.add(this.box8);
 
-        this.allRobots.create(950);
+        this.allRobots.create(920);
         this.allRobots.create(750);
         this.allRobots.create(550);
         this.allRobots.create(350);
@@ -636,6 +644,7 @@
             this.box5.render();
             this.box6.render();
             this.box7.render();
+            this.box8.render();
         }
 
         if (this.gameOver == true && this.msgPrint == false) {
