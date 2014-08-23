@@ -197,12 +197,12 @@
         this.context = canvas.context;
     };
 
-    Barrier.prototype.add = function (obj) {
+    Barrier.prototype.addBox = function (obj) {
         this.boxes[this.boxes.length] = obj;
     };
 
-    Barrier.prototype.addRobots = function (obj) {
-        this.robots = obj.robots;
+    Barrier.prototype.addRobot = function (obj) {
+        this.robots[this.robots.length] = obj;
     };
 
     Barrier.prototype.collision = function (a_x, a_y, a_w, a_h) {
@@ -373,6 +373,24 @@
         this.context.fill();
     };
 
+    var ManageBoxes = function (canvas, barrier) {
+        this.canvas = canvas;
+        this.barrier = barrier;
+        this.boxes = new Array();
+    };
+
+    ManageBoxes.prototype.create = function (width, height, x, y) {
+        var box = new Box(this.canvas, width, height, x, y);
+        this.barrier.addBox(box);
+        this.boxes[this.boxes.length] = box;
+    };
+
+    ManageBoxes.prototype.render = function () {
+        this.boxes.forEach( function (e) {
+            e.render();
+        });
+    };
+
     var Robot = function (canvas, barrier, x) {
         this.width = 20;
         this.height = 20;
@@ -475,6 +493,7 @@
 
     ManageRobots.prototype.create = function (x) {
         var robot = new Robot(this.canvas, this.barrier, x);
+        this.barrier.addRobot(robot);
         this.robots[this.robots.length] = robot;
     };
 
@@ -496,51 +515,62 @@
         document.addEventListener("keydown", (function (_this) { return function (e) { _this.keyboard.kDown(e); }; })(this));
         document.addEventListener("keyup",   (function (_this) { return function (e) { _this.keyboard.kUp(e);   }; })(this));
 
-
         this.msgPrint = false;
         this.gameInic = true;
         this.inGame = false;
         this.gameOver = false;
         this.winGame = false;
-
     };
 
     Game.prototype.create = function () {
         this.barrier = new Barrier(this.canvas);
         this.weapons = new ManageWeapons(this.canvas, this.barrier);
-
         this.animal = new Animal(this.canvas, this.weapons, this.barrier);
-
         this.robots = new ManageRobots(this.canvas, this.barrier);
+        this.boxes = new ManageBoxes(this.canvas, this.barrier);
 
-        this.box  = new Box(this.canvas, 200, 15, 140, 385);
-        this.box2 = new Box(this.canvas, 200, 100, 550, 300);
-        this.box3 = new Box(this.canvas, 100, 50, 780, 350);
-        this.box4 = new Box(this.canvas, 50, 50, 470, 350);
-        this.box5 = new Box(this.canvas, 10, 15, 570, 285);
-        this.box6 = new Box(this.canvas, 10, 15, 730, 285);
-        this.box7 = new Box(this.canvas, 10, 70, 760, 330);
-        this.box8 = new Box(this.canvas, 10, 70, 890, 330);
-        
-        this.barrier.add(this.box);
-        this.barrier.add(this.box2);
-        this.barrier.add(this.box3);
-        this.barrier.add(this.box4);
-        this.barrier.add(this.box5);
-        this.barrier.add(this.box6);
-        this.barrier.add(this.box7);
-        this.barrier.add(this.box8);
+        this.boxes.create(200, 15, 140, 385);
+        this.boxes.create(200, 100, 550, 300);
+        this.boxes.create(100, 50, 780, 350);
+        this.boxes.create(50, 50, 470, 350);
+        this.boxes.create(10, 15, 570, 285);
+        this.boxes.create(10, 15, 730, 285);
+        this.boxes.create(10, 70, 760, 330);
+        this.boxes.create(10, 70, 890, 330);
 
         this.robots.create(920);
         this.robots.create(750);
         this.robots.create(550);
         this.robots.create(350);
-
-        this.barrier.addRobots(this.robots);
     };
+
+    Game.prototype.printGameOver = function () {
+        this.canvas.context.font = '40pt Calibri';
+        this.canvas.context.textAlign = 'center';
+        this.canvas.context.fillStyle = 'red';
+        this.canvas.context.fillText('Game Over!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
+
+        this.canvas.context.font = '20pt Calibri';
+        this.canvas.context.textAlign = 'center';
+        this.canvas.context.fillStyle = 'blue';
+        this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+    };
+
+    Game.prototype.printWinGame = function () {
+        this.canvas.context.font = '40pt Calibri';
+        this.canvas.context.textAlign = 'center';
+        this.canvas.context.fillStyle = 'red';
+        this.canvas.context.fillText('You Won the game!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
+
+        this.canvas.context.font = '20pt Calibri';
+        this.canvas.context.textAlign = 'center';
+        this.canvas.context.fillStyle = 'blue';
+        this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+    }
 
     Game.prototype.manage = function () {
         this.fpsShow.render();
+
         if (this.gameInic == true && this.inGame == false) { // start new game on gameInic
             this.create();
             this.gameInic = false;
@@ -577,44 +607,17 @@
             this.canvas.clean();
             this.weapons.render();
             this.animal.render(this.keyboard.keyMap, this.keyboard.keyMapMemLR);
-            
             this.robots.render();
-            
-            this.box.render();
-            this.box2.render();
-            this.box3.render();
-            this.box4.render();
-            this.box5.render();
-            this.box6.render();
-            this.box7.render();
-            this.box8.render();
+            this.boxes.render();
         }
 
         if (this.gameOver == true && this.msgPrint == false) {
             this.msgPrint = true;
-
-            this.canvas.context.font = '40pt Calibri';
-            this.canvas.context.textAlign = 'center';
-            this.canvas.context.fillStyle = 'red';
-            this.canvas.context.fillText('Game Over!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
-
-            this.canvas.context.font = '20pt Calibri';
-            this.canvas.context.textAlign = 'center';
-            this.canvas.context.fillStyle = 'blue';
-            this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+            this.printGameOver();
         }
 
         if (this.winGame == true) {
-
-            this.canvas.context.font = '40pt Calibri';
-            this.canvas.context.textAlign = 'center';
-            this.canvas.context.fillStyle = 'red';
-            this.canvas.context.fillText('You Won the game!', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2);
-
-            this.canvas.context.font = '20pt Calibri';
-            this.canvas.context.textAlign = 'center';
-            this.canvas.context.fillStyle = 'blue';
-            this.canvas.context.fillText('Press Enter to start again.', this.canvas.canvas.width / 2, this.canvas.canvas.height / 2 + 40);
+            this.printWinGame();
         }
     };
 
