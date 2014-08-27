@@ -1,8 +1,21 @@
+/*******************************************************************************
+ *                                                                             *
+ *  Title:     Shooting Game                                                   *
+ *  Author:    Karol Altamirano                                                *
+ *  Version:   0.1                                                             *
+ *                                                                             *
+ *******************************************************************************/
+
 (function () {
+    /***********************************************************************    
+     *                                                                     *
+     * FpsShow - calculate and show actual real FPS of application         *
+     *                                                                     *
+     ***********************************************************************/
     var FpsShow = function () {
-        this.lastLoop = 0;
-        this.thisLoop = 0;
-        this.fps = 0;
+        this.lastLoop = 0; // time in ms of last frame 
+        this.thisLoop = 0; // time in ms of actual frame
+        this.fps = 0;      // actual fps
     };
 
     FpsShow.prototype.render = function () {
@@ -11,6 +24,12 @@
         this.lastLoop = this.thisLoop;
         document.getElementById('fps').innerHTML = "FPS: " + Math.round(this.fps);
     };
+
+    /***********************************************************************
+     *                                                                     *
+     * Canvas - create canvas and 2d context                               *
+     *                                                                     *
+     ***********************************************************************/
 
     var Canvas = function () {
         this.canvas = document.getElementById('myCanvas');
@@ -21,22 +40,28 @@
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * Keyboard - manage keyboard                                          *
+     *                                                                     *
+     ***********************************************************************/
+
     var Keyboard = function () {
         this.keyMap = { 37: false, 38: false, 39: false, 40: false, 32: false, 17: false, 13: false };
         this.keyMapMemLR = { 37: false, 39: false };
     };
 
     Keyboard.prototype.kDown = function (e) {
-        this.keyMap[e.keyCode] = true;
-        this.saveToMem(); // to decide which direction to fire    
+        this.keyMap[e.keyCode] = true; // save actual pressed key to keyMap
+        this.saveToMem();              // save history of left vs right key press to decide which direction to fire    
     };
 
     Keyboard.prototype.kUp = function (e) {
-        this.keyMap[e.keyCode] = false;
-        this.saveToMem(); // to decide which direction to fire
+        this.keyMap[e.keyCode] = false; // save actual key Up to keyMap
+        this.saveToMem();               // save history of left vs right key press to decide which direction to fire  
     };
 
-    Keyboard.prototype.saveToMem = function () { // save history of lefr / right key 
+    Keyboard.prototype.saveToMem = function () {
         if (this.keyMap[37] == true) {
             this.keyMapMemLR[37] = true;
             this.keyMapMemLR[39] = false;
@@ -47,29 +72,37 @@
         }
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * Animal - character we are able to control, main character           *
+     *                                                                     *
+     ***********************************************************************/
+
     var Animal = function (canvas, weapons, barrier) {
-        this.canvas = canvas.canvas;
-        this.context = canvas.context;
-        this.width = 20;
-        this.height = 20;
-        this.x = 10; // start position x
-        this.y = this.canvas.height - this.height; // start position y
-        this.fpsTiming = (new Date()).getTime();
-        this.speed = 100; // speed (px / s)
-        this.jumpSpeed = 500;
-        this.weapons = weapons;
-        this.barrier = barrier;
-        this.jumping = false; // false - not in jump | true - in jump
-        this.jumpInic = false;
-        this.jumpStartTime = 0; // jump timing - for gravity to calculate actual speed of the jump
-        this.falling = false;
-        this.fallStartTime = 0;
-        this.fallInic = false;
-        this.life = 1;
+        this.canvas        = canvas.canvas;             // canvas
+        this.context       = canvas.context;            // context
+        this.width         = 20;                        // width of the animal box
+        this.height        = 20;                        // height of the animal box
+        this.x             = 10;                               // start position x
+        this.y             = this.canvas.height - this.height; // start position y
+        this.fpsTiming     = (new Date()).getTime();           // current time for FPS calculation
+        this.speed         = 100;           // speed of animal in px/s
+        this.jumpSpeed     = 500;           // speed of jumping in px/s
+        this.weapons       = weapons;       // set weapons object
+        this.barrier       = barrier;       // set barrier object
+        this.jumping       = false;         // false - not in jump | true - in jump
+        this.jumpInic      = false;         // jump initialization
+        this.jumpStartTime = 0;             // jump timing - for gravity to calculate actual speed of the jump
+        this.falling       = false;         // if the animal is falling
+        this.fallStartTime = 0;             // actual time of start falling for FPS calculation
+        this.fallInic      = false;         // fall initialization
+        this.life          = 1;             // how many lives does the animal have
     };
 
-    Animal.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
-        var time = 0, pixels = 0;
+    /* left and right moving speed (px / s, respect actual fps ) */
+    Animal.prototype.calculateSpeed = function () {
+        var time   = 0, // time difference between now and last frame draw
+            pixels = 0; // how many pixels to move in order to respect speed in px / s
 
         time = (new Date()).getTime() - this.fpsTiming; // timing begin
         pixels = Math.round(this.speed * time / 1000);
@@ -78,7 +111,9 @@
     };
 
     Animal.prototype.jump = function () {
-        var pixels = 0, spd = 0, time = 0;
+        var pixels = 0, // how many pixels to move in order to respect speed in px / s
+            spd    = 0, // actual speed of animal in jump with respect of gravity acceleration
+            time   = 0; // time difference between now and last frame draw
 
         if (this.jumping == false && this.jumpInic == false) { // no jumping / no jump initialization
             return;
@@ -107,13 +142,17 @@
     };
 
     Animal.prototype.fall = function () {
+        var time   = 0, // time difference between now and last frame draw
+            spd    = 0, // actual speed of animal in fall with respect of gravity acceleration
+            pixels = 0, // how many pixels to move in order to respect speed in px / s
+            test   = 0; // if animal is jumping do not apply fall method
         
         if (this.jumping == true) {
             return;
         }
 
         if (this.falling == false && this.fallInic == false) { // test ground
-            var test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
+            test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
             if (!test) {
                 this.fallInic = true;
             }
@@ -141,12 +180,11 @@
     };
 
     Animal.prototype.render = function (keyMap, keyMapMemLR) {
-        var left = keyMap[37];
-        var up = keyMap[38] || keyMap[32];
-        var right = keyMap[39];
-        var down = keyMap[40];
-
-        var pixels = this.calculateSpeed(); // move left right
+        var left   = keyMap[37],                // left arrow pressed
+            up     = keyMap[38] || keyMap[32],  // up arrow or spacebar pressed
+            right  = keyMap[39],                // right arrow pressed
+            // down   = keyMap[40],             // down arrow is not used
+            pixels = this.calculateSpeed();     // calculate how many pixels to move right or left in order to respect speed in px / s
 
         if (left) {
             if (!this.barrier.collision(this.x - pixels, this.y, this.width, this.height)) {
@@ -169,16 +207,17 @@
         this.jump();
         this.fall();
 
-        if (keyMap[17] == true) { // create new weapon
+        if (keyMap[17] == true) { // create new weapon if control is pressed
             this.weapons.create(this.x, this.y, this.width, this.height, keyMapMemLR);
         }
 
-        // begin collision with robot
+        // collision with robot, loose 1 life
         if (this.barrier.collisionRobot(this.x, this.y, this.width, this.height)) {
             this.life -= 1;
         }
-        // end collision with robot
 
+
+        // draw the animal to the canvas
         this.context.beginPath();
         this.context.rect(this.x, this.y, this.width, this.height);
         this.context.fillStyle = 'yellow';
@@ -187,24 +226,31 @@
         this.context.strokeStyle = 'black';
         this.context.stroke();
 
-        this.fpsTiming = (new Date()).getTime();
+        this.fpsTiming = (new Date()).getTime(); // save actual time for next frame calculation
     };
 
+    /***********************************************************************
+     *           class to manage barriers in game, collisions of animal    *
+     * Barrier - with boxes, collision of animal with robots,              *
+     *           collision of weapons with robots and boxes                *
+     ***********************************************************************/
+
     var Barrier = function (canvas) {
-        this.boxes = new Array();
-        this.robots = new Array();
-        this.canvas = canvas.canvas;
-        this.context = canvas.context;
+        this.boxes = [];       // array of boxes that will be barriers (all boxes are barriers)
+        this.robots = [];      // array of robots to detect when animal comes to contact with robot
+        this.canvas = canvas.canvas;    // canvas
+        this.context = canvas.context;  // context of canvas
     };
 
     Barrier.prototype.addBox = function (obj) {
-        this.boxes[this.boxes.length] = obj;
+        this.boxes.push(obj);
     };
 
     Barrier.prototype.addRobot = function (obj) {
-        this.robots[this.robots.length] = obj;
+        this.robots.push(obj);
     };
 
+    /* when robot is killed it will be romoved from barrier */
     Barrier.prototype.removeRobot = function (index) {
         this.robots.splice(index, 1);
     }
@@ -226,10 +272,11 @@
 
     Barrier.prototype.collisionRobot = function (x, y, width, height) {
         var ret = false;
+
         this.robots.forEach( function (e) {
             if (x < e.x + e.width && x + width > e.x && y < e.y + e.height && y + height > e.y) {
-                e.life -= 1;
-                if (e.life <= 0) // kill robot
+                e.life -= 1;     // when robots come to the contact with weapon it will lose one life
+                if (e.life <= 0) // kill robot if it does not have any life
                     e.deleteMe = true;
                 ret = true;
             }
@@ -237,9 +284,11 @@
 
         return ret;
     };
-
+    /* when speed in px / s is greater than actual space between animal or robot calculate how many pixels to move to reach the barier */
     Barrier.prototype.newPxMove = function (a_x, a_y, a_w, a_h, pixels, direction) {
-        var newPx = 0;
+        var newPx = 0, // how many px can animal or robot moves to reach the barier 
+            a_yt  = 0, // variable to help find furute collision object
+            a_xt  = 0; // variable to help find furute collision object
 
         if (direction == 'down') {
             newPx = 0 - (this.canvas.height - a_y - a_h); // canvas bottom barrier
@@ -274,8 +323,14 @@
         return newPx;
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * Weapon - animal weapon that is fired with control key               *
+     *                                                                     *
+     ***********************************************************************/
+
     var Weapon = function (canvas, x, y, right_left, barrier) {
-        this.canvas = canvas.canvas;
+        this.canvas = canvas.canvas;                // 
         this.context = canvas.context;
         this.fpsTiming = (new Date()).getTime();
         this.speed = 400; // px / s
@@ -306,6 +361,7 @@
 
     Weapon.prototype.fireLeft = function () {
         var pixels = this.calculateSpeed();
+
         this.x -= pixels;
         if (this.barrier.collision(this.x, this.y, this.width, this.height) || 
             this.barrier.collisionRobot(this.x, this.y, this.width, this.height)) {
@@ -315,6 +371,7 @@
 
     Weapon.prototype.fireRight = function () {
         var pixels = this.calculateSpeed();
+
         this.x += pixels;
         if (this.barrier.collision(this.x, this.y, this.width, this.height) ||
             this.barrier.collisionRobot(this.x, this.y, this.width, this.height)) {
@@ -323,20 +380,31 @@
     }
 
     Weapon.prototype.calculateSpeed = function () {
-        var time = 0, pixels = 0;
+        var time   = 0, 
+            pixels = 0;
+
         time = (new Date()).getTime() - this.fpsTiming;
         pixels = Math.round(this.speed * time / 1000);
         return pixels;
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * ManageWeapons                                                       *
+     *                                                                     *
+     ***********************************************************************/
+
     var ManageWeapons = function (canvas, barrier) {
         this.canvas = canvas;
-        this.weapons = new Array();
+        this.weapons = [];
         this.barrier = barrier;
     };
 
     ManageWeapons.prototype.create = function (x, y, width, height, keyMapMemLR) {
-        var w_x, w_y, right_left;
+        var w_x, 
+            w_y, 
+            right_left;
+
         if (keyMapMemLR[37] == true) { // fire to left
             w_x = x - 2;
             w_y = y + (height / 2) - 1; // -1 px (height of the fire)
@@ -348,7 +416,7 @@
         }
 
         var w = new Weapon(this.canvas, w_x, w_y, right_left, this.barrier);
-        this.weapons[this.weapons.length] = w;
+        this.weapons.push(w);
     };
 
     ManageWeapons.prototype.render = function () {
@@ -360,6 +428,12 @@
             }
         }, this);
     };
+
+    /***********************************************************************
+     *                                                                     *
+     * Box                                                                 *
+     *                                                                     *
+     ***********************************************************************/
 
     var Box = function (canvas, width, height, x, y) {
         this.canvas = canvas.canvas;
@@ -377,16 +451,22 @@
         this.context.fill();
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * ManageBoxes                                                         *
+     *                                                                     *
+     ***********************************************************************/
+
     var ManageBoxes = function (canvas, barrier) {
         this.canvas = canvas;
         this.barrier = barrier;
-        this.boxes = new Array();
+        this.boxes = [];
     };
 
     ManageBoxes.prototype.create = function (width, height, x, y) {
         var box = new Box(this.canvas, width, height, x, y);
         this.barrier.addBox(box);
-        this.boxes[this.boxes.length] = box;
+        this.boxes.push(box);
     };
 
     ManageBoxes.prototype.render = function () {
@@ -394,6 +474,12 @@
             e.render();
         });
     };
+
+    /***********************************************************************
+     *                                                                     *
+     * Robot                                                               *
+     *                                                                     *
+     ***********************************************************************/
 
     var Robot = function (canvas, barrier, x) {
         this.width = 20;
@@ -415,7 +501,8 @@
     };
 
     Robot.prototype.calculateSpeed = function () { // left / right moving (px / s | respecting fps )
-        var time = 0, pixels = 0;
+        var time   = 0, 
+            pixels = 0;
 
         time = (new Date()).getTime() - this.fpsTiming; // timing begin
         pixels = Math.round(this.speed * time / 1000);
@@ -424,8 +511,13 @@
     };
 
     Robot.prototype.fall = function () {
+        var test   = 0,
+            spd    = 0,
+            time   = 0,
+            pixels = 0;
+
         if (this.falling == false && this.fallInic == false) { // test ground
-            var test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
+            test = this.barrier.collision(this.x, this.y + 1, this.width, this.height);
             if (!test) {
                 this.fallInic = true;
             }
@@ -489,16 +581,22 @@
 
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * ManageRobots                                                        *
+     *                                                                     *
+     ***********************************************************************/
+
     var ManageRobots = function (canvas, barrier) {
         this.canvas = canvas;
-        this.robots = new Array();
+        this.robots = [];
         this.barrier = barrier;
     };
 
     ManageRobots.prototype.create = function (x) {
         var robot = new Robot(this.canvas, this.barrier, x);
         this.barrier.addRobot(robot);
-        this.robots[this.robots.length] = robot;
+        this.robots.push(robot);
     };
 
     ManageRobots.prototype.render = function () {
@@ -511,6 +609,12 @@
             }
         }, this);
     };
+
+    /***********************************************************************
+     *                                                                     *
+     * Game                                                                *
+     *                                                                     *
+     ***********************************************************************/
 
     var Game = function () {
         this.canvas = new Canvas();
@@ -626,10 +730,13 @@
         }
     };
 
+    /***********************************************************************
+     *                                                                     *
+     * Begin Initialization                                                *
+     *                                                                     *
+     ***********************************************************************/
 
-    /***** BEGIN INITIALIZATION ********/
-
-    game = new Game();
+    var game = new Game();
 
     setInterval( function () {
         game.manage();   
