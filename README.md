@@ -1,2 +1,2 @@
-testGame
+Shooting Game
 ========

@@ -181,7 +181,7 @@
 
     Animal.prototype.render = function (keyMap, keyMapMemLR) {
         var left   = keyMap[37],                // left arrow pressed
-            up     = keyMap[38] || keyMap[32],  // up arrow or spacebar pressed
+            up     = keyMap[38],  // up arrow or spacebar pressed
             right  = keyMap[39],                // right arrow pressed
             // down   = keyMap[40],             // down arrow is not used
             pixels = this.calculateSpeed();     // calculate how many pixels to move right or left in order to respect speed in px / s
@@ -207,7 +207,7 @@
         this.jump();
         this.fall();
 
-        if (keyMap[17] == true) { // create new weapon if control is pressed
+        if (keyMap[17] || keyMap[32]) { // create new weapon if control is pressed
             this.weapons.create(this.x, this.y, this.width, this.height, keyMapMemLR);
         }
 
